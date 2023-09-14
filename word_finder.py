@@ -28,12 +28,10 @@ class FindWord:
             self.auth = sql.connect(user = 'root', password = self.sql_pass)
             if self.auth.is_connected():
                 self.wrong_pwd = False
-            
             cursor = self.auth.cursor()
             cursor.execute('CREATE DATABASE IF NOT EXISTS WORD_DATASET')
             cursor.execute('USE WORD_DATASET')
             cursor.execute('create table dataset(words varchar(200));')
-
         except:
             pass
 
@@ -51,7 +49,6 @@ class FindWord:
                     else:
                         print('File does not seem to have a valid auth key.')
                         break
-
         except FileNotFoundError as e:
             print("File adress seems to be incorrect",e)
 
@@ -67,8 +64,8 @@ class FindWord:
         except:
             f = open('popular.csv','w')
             f.close()
-
         print("Setup Succesful, You can continue with the program \n")
+        
     def WordExtractor(self,array):
         self.array = array
         msg = input("Enter the word[replace missing letters with '-']: ").lower()
@@ -114,7 +111,6 @@ class FindWord:
         print(f'{len(f_ans)} results match out of {len(self.array)} ({time_taken*100} ms)')  
         print(tabulate(f_ans,headers=['Index','Possible Words'],tablefmt='fancy_grid'))
         search = int(input("which word were you looking for [enter the number] : "))
-
         word = ''.join([i[1] for i in f_ans if i[0] == search])
 
         found = False
@@ -131,7 +127,6 @@ class FindWord:
             writer.writerows(self.records)
 
         retry = input("try again[y/n]: ")
-            
         if retry == 'y':
             print(len(array))
             if self.text:
@@ -144,18 +139,13 @@ class FindWord:
                 exit()
             elif again == 2:
                 import word_finder
-        
-
-
+                
     def TextParser(self):
         self.text = True
         print("This is what peak performance looks like")
         self.WordExtractor(self.word_list)
         
-        
     def Popularity_check(self):
-
-
         print('\n\t  Top 10 Most Searched Words\n')
         try:
             print(tabulate(sorted(self.records,reverse=True,key=lambda x: x[1]),headers=['Word','Count'],tablefmt='fancy_grid'))   
@@ -165,9 +155,7 @@ class FindWord:
             import word_finder
     
     def DatabaseParser(self):
-
         self.db = True
-
         self.auth = sql.connect(user = 'root', password = self.sql_pass,database = 'word_dataset')
         self.cursor = self.auth.cursor()
 
