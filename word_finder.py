@@ -18,16 +18,16 @@ class FindWord:
         self.popular = {}
         self.db = False
         self.text = False
-
+        self.records = []
         root = tk.Tk()
         root.withdraw()
-        
 
         file_auth_key = "auth:gAAAAABk_d3TUybVVg_uW-fJ8UeKoFVCS2apND_LdAq2lb5YiLJuDHdjLz6lxvXyrxjhqSKhdkzqs0vuOfzYDFKAGR18msM6Cg=="
         try:
             self.auth = sql.connect(user = 'root', password = self.sql_pass)
             if self.auth.is_connected():
                 self.wrong_pwd = False
+            
             cursor = self.auth.cursor()
             cursor.execute('CREATE DATABASE IF NOT EXISTS WORD_DATASET')
             cursor.execute('USE WORD_DATASET')
@@ -55,8 +55,6 @@ class FindWord:
         try:
             with  open('popular.csv','r') as self.popular_csv:
                 self.reader = csv.reader(self.popular_csv)
-                self.records = []
-
                 for i in self.reader:
                     if i:
                         i[1] = int(i[1])
@@ -64,13 +62,13 @@ class FindWord:
         except:
             f = open('popular.csv','w')
             f.close()
-        print("Setup Succesful, You can continue with the program \n")
-        
+        print("\nSetup Succesful, You can continue with the program \n")
+
     def WordExtractor(self,array):
         self.array = array
         msg = input("Enter the word[replace missing letters with '-']: ").lower()
-
         start = time.time()
+
         if msg == '':
             ch = (input("\nExit?[yes/no]: ")).lower()
             if ch == 'yes':
@@ -79,7 +77,7 @@ class FindWord:
             else:
                 if self.text:
                     self.TextParser()  
-                else:
+                else: 
                     self.DatabaseParser()
 
         lst = list(msg)
@@ -96,7 +94,7 @@ class FindWord:
         f_ans = [[i[0]] for i in c_ans if i[1] == len(rmsg)]
 
         for i in range(len(f_ans)):
-            f_ans[i].insert(0,i)
+            f_ans[i].insert(0,i) 
 
         if f_ans == []:
             print("no words were found, Please re enter correctly")
@@ -105,7 +103,7 @@ class FindWord:
             else:
                 self.DatabaseParser()
 
-        end = time.time()       
+        end = time.time()
         time_taken = round(end - start,2)   
 
         print(f'{len(f_ans)} results match out of {len(self.array)} ({time_taken*100} ms)')  
@@ -128,7 +126,7 @@ class FindWord:
 
         retry = input("try again[y/n]: ")
         if retry == 'y':
-            print(len(array))
+            print(self.db)
             if self.text:
                 self.TextParser()
             elif self.db:
@@ -138,30 +136,34 @@ class FindWord:
             if again ==  1:
                 exit()
             elif again == 2:
-                import word_finder
-                
+                return 
+
     def TextParser(self):
         self.text = True
         print("This is what peak performance looks like")
         self.WordExtractor(self.word_list)
-        
+
     def Popularity_check(self):
-        print('\n\t  Top 10 Most Searched Words\n')
-        try:
+        if self.records == []:
+            print('\n----Insert Records First----\n')
+        else:
+            print('\n\t  Top 10 Most Searched Words\n')
             print(tabulate(sorted(self.records,reverse=True,key=lambda x: x[1]),headers=['Word','Count'],tablefmt='fancy_grid'))   
             print("\n")
-        except:
-            print("enter records first ")
-            import word_finder
-    
+        
     def DatabaseParser(self):
         self.db = True
-        self.auth = sql.connect(user = 'root', password = self.sql_pass,database = 'word_dataset')
-        self.cursor = self.auth.cursor()
+
+        try:
+            self.auth = sql.connect(user = 'root', password = self.sql_pass,database = 'word_dataset')
+            self.cursor = self.auth.cursor()
+        except:
+            print("The password seems to be incorrect, pls try again")
+            return
 
         count = 1
         begin = time.time()
-        batch_size = 10000 
+        batch_size = 20000 
         self.cursor.execute('SELECT * FROM DATASET;')
         self.record = self.cursor.fetchall()
 
@@ -170,20 +172,24 @@ class FindWord:
                 array = [i[0] for i in self.record]
                 self.WordExtractor(array)
         else:
-            print("Inserting records into the database, this should take a few seconds")
-            for i in range(1, len(self.word_list), batch_size):
-                batch = self.word_list[i:i + batch_size]
-                values = [(word,) for word in batch]
-                insert_query = "INSERT INTO dataset VALUES (%s)"
+            try:
+                print("Inserting records into the database, this should take a few seconds")
+                for i in range(1, len(self.word_list), batch_size):
+                    batch = self.word_list[i:i + batch_size]
+                    values = [(word,) for word in batch]
+                    insert_query = "INSERT INTO dataset VALUES (%s)"
 
-                self.cursor.executemany(insert_query,values)
-                self.cursor.execute('SELECT COUNT(*) FROM DATASET')
-                completed = self.cursor.fetchone()
-                print(f"{round((completed[0] / len(self.word_list)) * 100, 2)}% completed",end='\r', flush=True)
-                self.auth.commit()
+                    self.cursor.executemany(insert_query,values)
+                    self.cursor.execute('SELECT COUNT(*) FROM DATASET')
+                    completed = self.cursor.fetchone()
+                    print(f"{round((completed[0] / len(self.word_list)) * 100, 2)}% completed",end='\r', flush=True)
+                    self.auth.commit()
 
-            end = time.time()
-            print(f'Completed in {(int(end - begin)) } seconds.')
+                end = time.time()
+                print(f'Completed in {(int(end - begin)) } seconds.')
+
+            except:
+                print("There seems to be an issue with the connectivity, Retrying again...")
 
             self.DatabaseParser()
 
