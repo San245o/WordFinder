@@ -5,11 +5,11 @@ import time #built in
 from tkinter import filedialog as fd #pip install tk
 import tkinter as tk
 import csv
+from itertools import groupby
 
 class FindWord:
-    def __init__(self,sql_pass):
-
-        self.sql_pass = sql_pass
+    def __init__(self):
+        self.sql_pass = None
         self.file_not_found = True
         self.wrong_pwd = True
         self.auth = None
@@ -23,18 +23,6 @@ class FindWord:
         root.withdraw()
 
         file_auth_key = "auth:gAAAAABk_d3TUybVVg_uW-fJ8UeKoFVCS2apND_LdAq2lb5YiLJuDHdjLz6lxvXyrxjhqSKhdkzqs0vuOfzYDFKAGR18msM6Cg=="
-        try:
-            self.auth = sql.connect(user = 'root', password = self.sql_pass)
-            if self.auth.is_connected():
-                self.wrong_pwd = False
-            
-            cursor = self.auth.cursor()
-            cursor.execute('CREATE DATABASE IF NOT EXISTS WORD_DATASET')
-            cursor.execute('USE WORD_DATASET')
-            cursor.execute('create table dataset(words varchar(200));')
-        except:
-            pass
-
         try:
             self.adr = fd.askopenfilename(title='Open Dataset file',filetypes=[('Text files','*.txt')])
             if not self.adr:
@@ -94,13 +82,13 @@ class FindWord:
         f_ans = [[i[0]] for i in c_ans if i[1] == len(rmsg)]
 
         for i in range(len(f_ans)):
-            f_ans[i].insert(0,i) 
+            f_ans[i].insert(0,i+1)
 
         if f_ans == []:
             print("no words were found, Please re enter correctly")
             if self.text:
                 self.TextParser()
-            else:
+            if self.db:
                 self.DatabaseParser()
 
         end = time.time()
@@ -109,6 +97,11 @@ class FindWord:
         print(f'{len(f_ans)} results match out of {len(self.array)} ({time_taken*100} ms)')  
         print(tabulate(f_ans,headers=['Index','Possible Words'],tablefmt='fancy_grid'))
         search = int(input("which word were you looking for [enter the number] : "))
+
+        while search > len(f_ans):
+            print("Word out of range, Retry")
+            search = int(input("which word were you looking for [enter the number] : "))
+        
         word = ''.join([i[1] for i in f_ans if i[0] == search])
 
         found = False
@@ -126,7 +119,6 @@ class FindWord:
 
         retry = input("try again[y/n]: ")
         if retry == 'y':
-            print(self.db)
             if self.text:
                 self.TextParser()
             elif self.db:
@@ -136,6 +128,8 @@ class FindWord:
             if again ==  1:
                 exit()
             elif again == 2:
+                self.db = False
+                self.text = False
                 return 
 
     def TextParser(self):
@@ -150,20 +144,55 @@ class FindWord:
             print('\n\t  Top 10 Most Searched Words\n')
             print(tabulate(sorted(self.records,reverse=True,key=lambda x: x[1]),headers=['Word','Count'],tablefmt='fancy_grid'))   
             print("\n")
-        
+
+    def UnScramble(self):
+        word = input("Enter the word to unscramble it: ")
+
+        filtered_words = [msg for msg in self.word_list if set(word) == set(msg)]
+        length_to_words = {}
+        for msg in filtered_words:
+            length = len(msg)
+            if length in length_to_words:
+                length_to_words[length].append(msg)
+            else:
+                length_to_words[length] = [msg]
+        max_num_words = max(len(words) for words in length_to_words.values())
+        transposed_data = []
+        for length, words in length_to_words.items():
+            words += ['-' for _ in range(max_num_words - len(words))]
+            transposed_data.append([f"{length} letters"] + words)
+        headers = ['No.'] + [f"Word {i+1}" for i in range(max_num_words)]
+        print(tabulate(transposed_data, headers=headers, tablefmt='fancy_grid', missingval='-'))
+
+
+
     def DatabaseParser(self):
         self.db = True
+        self.sql_pass = input("Enter your mysql password: ")
 
+        try:
+            self.auth = sql.connect(user = 'root', password = self.sql_pass)
+            if self.auth.is_connected():
+                self.wrong_pwd = False
+                
+            cursor = self.auth.cursor()
+            cursor.execute('CREATE DATABASE IF NOT EXISTS WORD_DATASET')
+            cursor.execute('USE WORD_DATASET')
+            cursor.execute('create table dataset(words varchar(200));')           
+
+        except:
+            pass
+        
         try:
             self.auth = sql.connect(user = 'root', password = self.sql_pass,database = 'word_dataset')
             self.cursor = self.auth.cursor()
         except:
             print("The password seems to be incorrect, pls try again")
-            return
+            import word_finder
 
         count = 1
         begin = time.time()
-        batch_size = 20000 
+        batch_size = 10000
         self.cursor.execute('SELECT * FROM DATASET;')
         self.record = self.cursor.fetchall()
 
@@ -193,8 +222,7 @@ class FindWord:
 
             self.DatabaseParser()
 
-password = input("Enter your mysql password: ")
-Instance = FindWord(password)
+Instance = FindWord()
 
 while True:
     print(f"Searching 370k+ words to help you!")
@@ -205,5 +233,10 @@ while True:
         Instance.DatabaseParser()
     elif ch == '3':
         Instance.Popularity_check()
+        Instance.UnScramble()
+    else:
+        exit()
+
+
     else:
         exit()
