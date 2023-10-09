@@ -226,17 +226,15 @@ Instance = FindWord()
 
 while True:
     print(f"Searching 370k+ words to help you!")
-    ch = input('1. Find word through txt file\n2. Find word through mysql database\n3. Display searched words\n4. Exit\nEnter your choice: ')
+    ch = input('1. Find word through txt file\n2. Find word through mysql database\n3. Display searched words\n4. Unscramble Words\n5. Exit\nEnter your choice: ')
     if ch == '1':
         Instance.TextParser()
     elif ch == '2':
         Instance.DatabaseParser()
     elif ch == '3':
         Instance.Popularity_check()
+    elif ch == '4':
         Instance.UnScramble()
     else:
         exit()
 
-
-    else:
-        exit()
