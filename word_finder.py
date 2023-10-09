@@ -147,7 +147,6 @@ class FindWord:
 
     def UnScramble(self):
         word = input("Enter the word to unscramble it: ")
-
         filtered_words = [msg for msg in self.word_list if set(word) == set(msg)]
         length_to_words = {}
         for msg in filtered_words:
@@ -163,8 +162,6 @@ class FindWord:
             transposed_data.append([f"{length} letters"] + words)
         headers = ['No.'] + [f"Word {i+1}" for i in range(max_num_words)]
         print(tabulate(transposed_data, headers=headers, tablefmt='fancy_grid', missingval='-'))
-
-
 
     def DatabaseParser(self):
         self.db = True
