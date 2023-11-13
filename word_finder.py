@@ -6,6 +6,7 @@ from tkinter import filedialog as fd #pip install tk
 import tkinter as tk
 import csv
 from itertools import groupby
+import requests
 
 class FindWord:
     def __init__(self):
@@ -15,7 +16,6 @@ class FindWord:
         self.auth = None
         self.word_list = None
         self.file = None
-        self.popular = {}
         self.db = False
         self.text = False
         self.records = []
@@ -80,7 +80,7 @@ class FindWord:
 
         c_ans = Counter(sorted(list(ans))).most_common()        
         f_ans = [[i[0]] for i in c_ans if i[1] == len(rmsg)]
-
+        print(f_ans)
         for i in range(len(f_ans)):
             f_ans[i].insert(0,i+1)
 
@@ -94,7 +94,8 @@ class FindWord:
         end = time.time()
         time_taken = round(end - start,2)   
 
-        print(f'{len(f_ans)} results match out of {len(self.array)} ({time_taken*100} ms)')  
+        print(f'\n{len(f_ans)} results match out of {len(self.array)} ({round(time_taken*100,2)} ms)')  
+        
         print(tabulate(f_ans,headers=['Index','Possible Words'],tablefmt='fancy_grid'))
         search = int(input("which word were you looking for [enter the number] : "))
 
@@ -103,6 +104,20 @@ class FindWord:
             search = int(input("which word were you looking for [enter the number] : "))
         
         word = ''.join([i[1] for i in f_ans if i[0] == search])
+        
+        try:
+            url = "https://api.dictionaryapi.dev/api/v2/entries/en/"+word
+            meaning = requests.get(url).json()
+            txtmeans = str(meaning[0]['meanings'][0]['definitions'][0]['definition'])
+            try:
+                phonetics = str(meaning[0]['phonetics'][1]['text'])
+            except IndexError:
+                phonetics = ''
+                pass
+            print(f'\n  {phonetics}\n{word}: {txtmeans}\n')
+
+        except KeyError:
+            print("no definitions found for this particular word")
 
         found = False
         for record in self.records:
@@ -144,7 +159,7 @@ class FindWord:
             print('\n\t  Top 10 Most Searched Words\n')
             print(tabulate(sorted(self.records,reverse=True,key=lambda x: x[1]),headers=['Word','Count'],tablefmt='fancy_grid'))   
             print("\n")
-
+            
     def UnScramble(self):
         word = input("Enter the word to unscramble it: ")
         filtered_words = [msg for msg in self.word_list if set(word) == set(msg)]
@@ -234,4 +249,3 @@ while True:
         Instance.UnScramble()
     else:
         exit()
-
